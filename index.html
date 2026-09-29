@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Git Playground</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F5FB; --panel:#FFFFFF; --panel2:#EEF2F9; --border:#D9E1EE;
+  --text:#212A3B; --muted:#6C7690;
+  --accent:#2F6FED; --staged:#1FA97A; --merge:#8B5CF6; --danger:#E0483B; --commitc:#5B6EE8;
+  --font-ui:'Space Grotesk',sans-serif; --font-mono:'JetBrains Mono',monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);min-height:100%}
+h1,h2,h3{margin:0;font-weight:700}
+button{font-family:var(--font-ui);cursor:pointer}
+.app{display:flex;flex-direction:column;min-height:100vh}
+header{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+header h1{font-size:18px;letter-spacing:.2px}
+.levels{display:flex;gap:6px;margin-left:auto}
+.lvl{background:transparent;border:1px solid var(--border);color:var(--muted);padding:7px 14px;border-radius:7px;font-size:13px;font-weight:500}
+.lvl.active{background:var(--accent);color:#FFFFFF;border-color:var(--accent)}
+.ghost{background:transparent;border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:7px;font-size:13px}
+main{display:flex;flex:1;gap:16px;padding:16px 20px;overflow-x:auto}
+.left{width:360px;min-width:320px;display:flex;flex-direction:column;gap:14px}
+.right{flex:1;display:flex;flex-direction:column;gap:14px;min-width:480px}
+.challenges{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px;overflow-y:auto;max-height:280px}
+.challenges h2{font-size:14px;color:var(--muted);text-transform:none;margin-bottom:8px}
+.chal{display:flex;gap:10px;padding:8px 4px;border-bottom:1px solid var(--border);font-size:13px}
+.chal:last-child{border-bottom:none}
+.chal .tick{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--border);flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;color:transparent}
+.chal.done .tick{background:var(--staged);border-color:var(--staged);color:#FFFFFF}
+.chal.done .title{color:var(--muted);text-decoration:line-through}
+.chal .title{font-weight:500}
+.chal .hint{color:var(--muted);font-family:var(--font-mono);font-size:11.5px;margin-top:2px}
+.terminal{background:var(--panel2);border:1px solid var(--border);border-radius:10px;display:flex;flex-direction:column;flex:1;min-height:260px;overflow:hidden}
+.term-out{flex:1;overflow-y:auto;padding:12px 14px;font-family:var(--font-mono);font-size:12.5px;line-height:1.55}
+.term-out .line{margin-bottom:8px}
+.term-out .cmd{color:var(--accent)}
+.term-out .cmd::before{content:"$ "}
+.term-out .ok{color:var(--text)}
+.term-out .err{color:var(--danger)}
+.term-out .win{color:var(--staged)}
+.term-out .note{color:var(--merge);font-style:italic}
+#termForm{display:flex;align-items:center;border-top:1px solid var(--border);padding:10px 14px;gap:8px}
+.replayRow{display:flex;align-items:center;gap:10px;border-top:1px solid var(--border);padding:8px 14px}
+.replayRow button{background:transparent;border:1px solid var(--border);color:var(--text);padding:6px 12px;border-radius:7px;font-size:12.5px}
+.replayRow button:hover{border-color:var(--accent)}
+.hidden{display:none}
+.prompt{color:var(--accent);font-family:var(--font-mono)}
+#termIn{flex:1;background:transparent;border:none;outline:none;color:var(--text);font-family:var(--font-mono);font-size:13px}
+.wd-row{display:flex;gap:12px}
+.col{flex:1;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px;min-height:120px}
+.col h3{font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-family:var(--font-mono);font-size:12px;padding:6px 10px;border-radius:7px;border:1.5px solid var(--border);background:var(--panel2);cursor:pointer;transition:transform .15s,background .3s,border-color .3s}
+.chip.modified{border-color:var(--accent);color:var(--accent)}
+.chip.untracked{border-color:var(--muted);color:var(--muted);border-style:dashed}
+.chip.staged{border-color:var(--staged);color:var(--staged);background:rgba(31,169,122,.10)}
+.chip.pulse{animation:pop .35s ease}
+@keyframes pop{0%{transform:scale(1)}45%{transform:scale(1.12)}100%{transform:scale(1)}}
+#repoInfo{font-family:var(--font-mono);font-size:12px;color:var(--muted);line-height:1.6}
+#repoInfo b{color:var(--text)}
+.graph-wrap{background:var(--panel);border:1px solid var(--border);border-radius:10px;flex:1;overflow:auto;padding:10px}
+svg text{font-family:var(--font-mono);fill:var(--text)}
+@keyframes nodeIn{0%{opacity:0;transform:scale(.25)}70%{transform:scale(1.12)}100%{opacity:1;transform:scale(1)}}
+@keyframes tagIn{0%{opacity:0;transform:translateY(6px) scale(.85)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes edgeIn{0%{opacity:0}100%{opacity:1}}
+@keyframes ringPulse{0%{r:22;opacity:.55}100%{r:30;opacity:0}}
+.node-new{animation:nodeIn .45s cubic-bezier(.34,1.56,.64,1);transform-box:fill-box;transform-origin:center}
+.tag-new{animation:tagIn .35s ease-out;transform-box:fill-box;transform-origin:center}
+.edge-new{animation:edgeIn .5s ease-out}
+.head-ring{animation:ringPulse 1.6s ease-out infinite}
+#refPanel{position:fixed;inset:0;background:rgba(30,36,54,.45);display:flex;align-items:center;justify-content:center;z-index:20}
+#refPanel.hidden{display:none}
+.refBox{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;width:min(560px,90vw);max-height:80vh;overflow-y:auto}
+.refBox h2{font-size:16px;margin-bottom:4px}
+.refBox p.sub{color:var(--muted);font-size:12.5px;margin:0 0 14px}
+.refBox dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:12.5px}
+.refBox dt{font-family:var(--font-mono);color:var(--accent);white-space:nowrap}
+.refBox dd{color:var(--muted);margin:0}
+.refBox button{margin-top:16px;background:var(--accent);color:#FFFFFF;border:none;padding:8px 16px;border-radius:7px;font-weight:600}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--staged);color:#FFFFFF;padding:10px 18px;border-radius:8px;font-weight:600;font-size:13px;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;z-index:30}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px)}
+@media (max-width:840px){main{flex-direction:column}.left,.right{width:100%;min-width:0}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>🌿 Git Playground</h1>
+  <div class="levels">
+    <button class="lvl active" data-level="easy">Easy</button>
+    <button class="lvl" data-level="medium">Medium</button>
+    <button class="lvl" data-level="hard">Hard</button>
+  </div>
+  <button class="ghost" id="refBtn">Glossary &amp; reference</button>
+</header>
+<main>
+  <div class="left">
+    <section class="challenges">
+      <h2 id="chalTitle">Easy · 0/4 complete</h2>
+      <div id="chalList"></div>
+    </section>
+    <section class="terminal">
+      <div class="term-out" id="termOut"></div>
+      <div class="replayRow">
+        <button type="button" id="replayBtn">▶ Replay all commands</button>
+        <button type="button" id="stopBtn" class="hidden">⏹ Stop</button>
+        <span id="replayStatus" style="color:var(--muted);font-size:12px"></span>
+      </div>
+      <form id="termForm"><span class="prompt">$</span><input id="termIn" placeholder="git init" autocomplete="off" spellcheck="false"></form>
+    </section>
+  </div>
+  <div class="right">
+    <div class="wd-row">
+      <div class="col"><h3>Working Directory <span style="color:var(--muted);font-weight:400">— click a clean file to edit it</span></h3><div class="chips" id="wdChips"></div></div>
+      <div class="col"><h3>Staging Area</h3><div class="chips" id="stageChips"></div></div>
+      <div class="col"><h3>Repository</h3><div id="repoInfo"></div></div>
+    </div>
+    <div class="graph-wrap"><svg id="graph" width="600" height="200"></svg></div>
+  </div>
+</main>
+</div>
+<div id="refPanel" class="hidden"><div class="refBox">
+  <h2>Glossary — easy ways to remember it</h2>
+  <p class="sub">The core idea: your project moves through three "rooms" as you work.</p>
+  <dl>
+    <dt>Working Directory</dt><dd>Your desk. Where you're actually editing files.</dd>
+    <dt>Staging Area</dt><dd>A gift box. You choose which edits go in before you seal it.</dd>
+    <dt>Repository / commit</dt><dd>A photograph. A permanent snapshot you can always come back to.</dd>
+    <dt>Branch</dt><dd>A parallel notebook. Try new ideas without touching the original.</dd>
+    <dt>HEAD</dt><dd>A "you are here" pin — shows which branch/commit you're standing on.</dd>
+    <dt>Merge</dt><dd>Combining two notebooks' ideas back into one.</dd>
+  </dl>
+  <p class="sub" style="margin-top:16px">Reference-only commands (not simulated here — try them for real once you're comfortable!):</p>
+  <dl>
+    <dt>git stash</dt><dd>Shove your mess in a drawer for later</dd>
+    <dt>git rebase -i</dt><dd>Rewrite/squash your photo album</dd>
+    <dt>git cherry-pick</dt><dd>Copy one photo onto another timeline</dd>
+    <dt>git reset --hard</dt><dd>Throw away all unsaved edits</dd>
+    <dt>git remote / push / pull</dt><dd>Sync your notebook with a shared one online</dd>
+    <dt>git reflog</dt><dd>The safety net that remembers everything, even mistakes</dd>
+  </dl>
+  <button id="refClose">Close</button>
+</div></div>
+<div class="toast" id="toast"></div>
+<script>
+const FILES=['index.html','app.js','style.css'];
+let state, level='easy', flags={};
+
+function genHash(){return Math.random().toString(16).slice(2,9);}
+
+function freshState(){
+  return {initialized:false, files:{}, branches:{}, head:{branch:'main'}, commits:[],
+    lane:{main:0}, nextLane:1, xCounter:0, commitLog:[], mergeLog:[], ranLogGraph:false, ranBranchList:false,
+    ranStatus:false, everModified:false, everRestored:false, ranDiffWithChanges:false, blockedDelete:false};
+}
+const ANALOGY={
+  init:"💡 Like opening a brand-new notebook and writing 'Day 1' on the cover — Git starts keeping a diary of this folder.",
+  status:"💡 Like glancing at your to-do list — what's edited, what's packed, what's still untouched.",
+  add:"💡 Like packing an item into a gift box before you wrap it — it's chosen, but not sealed yet.",
+  commit:"💡 Like taking a photograph — a permanent snapshot you can always travel back to.",
+  restore:"💡 Like using an eraser — your scribbles vanish and the page looks like the last photo again.",
+  branch:"💡 Like photocopying your notebook so you can scribble wild ideas without ruining the original.",
+  switch:"💡 Like stepping through a door into a parallel notebook — nothing here has been rewritten, you've just moved.",
+  checkout:"💡 Like stepping through a door into a parallel notebook — nothing here has been rewritten, you've just moved.",
+  merge:"💡 Like combining two notebooks' best ideas into one final notebook.",
+  log:"💡 Like flipping back through your photo album, snapshot by snapshot.",
+  diff:"💡 Like a spot-the-difference game between your current page and the last photo you took.",
+};
+state=freshState();
+
+function isAncestor(a,b){ // is commit `a` an ancestor of (or equal to) commit `b`?
+  if(!a||!b) return false;
+  let seen=new Set(), q=[b];
+  while(q.length){ const c=q.shift(); if(c===a) return true; if(seen.has(c)) continue; seen.add(c);
+    const commit=state.commits.find(x=>x.id===c); if(commit) q.push(...commit.parents); }
+  return false;
+}
+
+function out(html,cls){ const d=document.getElementById('termOut'); const p=document.createElement('div'); p.className='line '+(cls||''); p.innerHTML=html; d.appendChild(p); d.scrollTop=d.scrollHeight; }
+
+function pulse(el){ el.classList.add('pulse'); setTimeout(()=>el.classList.remove('pulse'),350); }
+
+let history=[], isReplaying=false, replayTimer=null;
+
+function run(raw,fromReplay){
+  if(!fromReplay) history.push(raw);
+  out(escapeHtml(raw),'cmd');
+  const cmd=raw.trim();
+  const tokens=cmd.split(/\s+/);
+  if(tokens[0]!=='git'){ out('Only <code>git</code> commands work here.','err'); return; }
+  const sub=tokens[1];
+  try{
+    if(sub==='init') doInit();
+    else if(sub==='status') doStatus();
+    else if(sub==='add') doAdd(tokens[2]);
+    else if(sub==='commit') doCommit(cmd);
+    else if(sub==='branch') doBranch(tokens.slice(2));
+    else if(sub==='switch') doSwitch(tokens.slice(2));
+    else if(sub==='checkout') doCheckout(tokens.slice(2));
+    else if(sub==='merge') doMerge(tokens[2]);
+    else if(sub==='log') doLog(cmd.includes('--graph'));
+    else if(sub==='diff') doDiff();
+    else if(sub==='restore') doRestore(tokens[2]);
+    else { out('Not supported in this playground. Try: init, add, commit, status, branch, switch, checkout, merge, log, diff, restore — or open the Glossary.','err'); renderAll(); evaluateChallenges(); return; }
+    if(ANALOGY[sub]) out(ANALOGY[sub],'note');
+  }catch(e){ out(e.message,'err'); }
+  renderAll(); evaluateChallenges();
+}
+function escapeHtml(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function req(cond,msg){ if(!cond) throw new Error(msg); }
+
+function doInit(){
+  if(state.initialized){ out('Already a git repository.'); return; }
+  state.initialized=true;
+  FILES.forEach(f=>state.files[f]={status:'untracked'});
+  out('Initialized empty Git repository. Your three files (index.html, app.js, style.css) now exist on disk but Git isn\'t tracking them yet — they show up as <b>untracked</b>.','ok win');
+}
+function doStatus(){
+  req(state.initialized,'Not a git repository. Run <code>git init</code> first.');
+  state.ranStatus=true;
+  const staged=FILES.filter(f=>state.files[f].status==='staged');
+  const mod=FILES.filter(f=>state.files[f].status==='modified');
+  const untr=FILES.filter(f=>state.files[f].status==='untracked');
+  let m=`On branch <b>${state.head.branch}</b><br>`;
+  if(!staged.length&&!mod.length&&!untr.length) m+='nothing to commit, working tree clean';
+  else{
+    if(staged.length) m+=`Changes to be committed: ${staged.join(', ')}<br>`;
+    if(mod.length) m+=`Changes not staged: ${mod.join(', ')}<br>`;
+    if(untr.length) m+=`Untracked files: ${untr.join(', ')}`;
+  }
+  out(m,'ok');
+}
+function doAdd(arg){
+  req(state.initialized,'Not a git repository. Run <code>git init</code> first.');
+  req(arg,'Specify a file, e.g. <code>git add app.js</code>, or <code>git add .</code> for everything.');
+  const list = arg==='.' ? FILES.filter(f=>['modified','untracked'].includes(state.files[f].status)) : [arg];
+  if(arg!=='.'&&!FILES.includes(arg)) throw new Error(`No such file: ${arg}. Try one of ${FILES.join(', ')}.`);
+  list.forEach(f=>state.files[f].status='staged');
+  out(list.length? `Staged: ${list.join(', ')} — now sitting in the Staging Area, ready to commit.`:'Nothing to add.','ok win');
+}
+function doCommit(cmd){
+  req(state.initialized,'Not a git repository. Run <code>git init</code> first.');
+  const m=cmd.match(/-m\s+["'](.+?)["']/);
+  req(m,'Provide a commit message, e.g. <code>git commit -m "add homepage"</code>.');
+  const staged=FILES.filter(f=>state.files[f].status==='staged');
+  req(staged.length,'Nothing staged. Run <code>git add</code> first.');
+  const parent=state.branches[state.head.branch]||null;
+  const id=genHash();
+  const commit={id,parents:parent?[parent]:[],message:m[1],lane:state.lane[state.head.branch]??0,x:state.xCounter++};
+  state.commits.push(commit);
+  state.branches[state.head.branch]=id;
+  staged.forEach(f=>state.files[f].status='unmodified');
+  state.commitLog.push({id,branch:state.head.branch});
+  out(`[${state.head.branch} ${id.slice(0,7)}] ${m[1]}`,'ok win');
+}
+function doBranch(args){
+  req(state.initialized,'Not a git repository. Run <code>git init</code> first.');
+  if(!args.length){ state.ranBranchList=true; out(Object.keys(state.branches).map(b=>(b===state.head.branch?'* ':'  ')+b).join('<br>')||'(no branches yet)'); return; }
+  if(args[0]==='-d'||args[0]==='-D'){
+    const name=args[1], force=args[0]==='-D';
+    req(name&&state.branches[name],'Branch not found.');
+    req(name!==state.head.branch,"Can't delete the branch you're currently on.");
+    if(!force && !isAncestor(state.branches[name], state.branches['main'])){ state.blockedDelete=true; throw new Error(`Branch '${name}' isn't fully merged into main. Merge it first, or force with <code>git branch -D</code>.`); }
+    delete state.branches[name];
+    out(`Deleted branch ${name}.`,'ok win'); return;
+  }
+  const name=args[0];
+  req(name,'Specify a branch name.');
+  req(!state.branches[name],`Branch '${name}' already exists.`);
+  req(state.commits.length,'Make at least one commit before branching.');
+  state.branches[name]=state.branches[state.head.branch];
+  state.lane[name]=state.nextLane++;
+  out(`Created branch '${name}' at the same commit as ${state.head.branch}.`,'ok win');
+}
+function switchTo(name,create){
+  req(state.initialized,'Not a git repository. Run <code>git init</code> first.');
+  if(create){ doBranch([name]); }
+  req(state.branches[name],`Branch '${name}' does not exist. Create it with -c/-b.`);
+  state.head.branch=name;
+  FILES.forEach(f=>state.files[f].status='unmodified');
+  out(`Switched to branch '${name}'.`,'ok win');
+}
+function doSwitch(a){ if(a[0]==='-c') switchTo(a[1],true); else switchTo(a[0],false); }
+function doCheckout(a){ if(a[0]==='-b') switchTo(a[1],true); else switchTo(a[0],false); }
+function doMerge(name){
+  req(state.initialized,'Not a git repository. Run <code>git init</code> first.');
+  req(name&&state.branches[name],'Specify an existing branch to merge.');
+  const cur=state.head.branch, curId=state.branches[cur], srcId=state.branches[name];
+  if(curId===srcId){ out('Already up to date.'); return; }
+  if(isAncestor(curId,srcId)){
+    state.branches[cur]=srcId;
+    state.mergeLog.push({from:name,into:cur,type:'ff'});
+    out(`Fast-forward: ${cur} now points to the same commit as ${name}.`,'ok win');
+  }else{
+    const id=genHash();
+    const commit={id,parents:[curId,srcId],message:`Merge branch '${name}' into ${cur}`,lane:state.lane[cur]??0,x:state.xCounter++};
+    state.commits.push(commit); state.branches[cur]=id;
+    state.mergeLog.push({from:name,into:cur,type:'merge'});
+    out(`Created a merge commit joining ${cur} and ${name}: ${id.slice(0,7)}.`,'ok win');
+  }
+}
+function doLog(graph){
+  req(state.initialized&&state.commits.length,'No commits yet.');
+  let cur=state.branches[state.head.branch], list=[], seen=new Set();
+  (function walk(c){ if(!c||seen.has(c))return; seen.add(c); const cm=state.commits.find(x=>x.id===c); if(!cm)return; list.push(cm); cm.parents.forEach(walk); })(cur);
+  list.sort((a,b)=>b.x-a.x);
+  out(list.map(c=>`${c.id.slice(0,7)} ${c.message}`).join('<br>'));
+  if(graph){ state.ranLogGraph=true; out('↑ See the branch graph panel below for the visual version.'); }
+}
+function doDiff(){
+  req(state.initialized,'Not a git repository. Run <code>git init</code> first.');
+  const mod=FILES.filter(f=>['modified','staged'].includes(state.files[f].status));
+  if(mod.length) state.ranDiffWithChanges=true;
+  out(mod.length? `${mod.length} file(s) differ from the last commit: ${mod.join(', ')}. (This playground shows file-level changes, not line diffs.)` : 'No differences.');
+}
+function doRestore(arg){
+  req(state.initialized,'Not a git repository. Run <code>git init</code> first.');
+  req(arg&&FILES.includes(arg),`Specify a file, e.g. <code>git restore app.js</code>.`);
+  req(['modified','staged'].includes(state.files[arg].status),`${arg} has no changes to restore.`);
+  state.files[arg].status='unmodified';
+  state.everRestored=true;
+  out(`Restored ${arg} — it now matches the last commit again.`,'ok win');
+}
+
+// ---- rendering ----
+function renderAll(){
+  const wd=document.getElementById('wdChips'), st=document.getElementById('stageChips');
+  wd.innerHTML=''; st.innerHTML='';
+  if(!state.initialized){ document.getElementById('repoInfo').innerHTML='<i>No repository yet — run <code>git init</code>.</i>'; drawGraph(); return; }
+  FILES.forEach(f=>{
+    const s=state.files[f].status;
+    if(s==='staged'){
+      const c=document.createElement('div'); c.className='chip staged'; c.textContent=f; st.appendChild(c);
+    }else{
+      const c=document.createElement('div'); c.className='chip '+(s==='modified'?'modified':s==='untracked'?'untracked':''); c.textContent=f;
+      c.title='Click to simulate editing this file';
+      c.onclick=()=>{ if(['unmodified','untracked'].includes(state.files[f].status)){ state.files[f].status='modified'; state.everModified=true; renderAll(); pulse(c); evaluateChallenges(); } };
+      wd.appendChild(c);
+    }
+  });
+  const headCommit=state.branches[state.head.branch];
+  const cm=state.commits.find(x=>x.id===headCommit);
+  document.getElementById('repoInfo').innerHTML = cm
+    ? `Branch: <b>${state.head.branch}</b><br>HEAD → ${cm.id.slice(0,7)}<br>"${cm.message}"<br>${state.commits.length} commit(s) total`
+    : `Branch: <b>${state.head.branch}</b><br><i>no commits yet</i>`;
+  drawGraph();
+}
+let seenNodes=new Set(), seenEdges=new Set(), seenTags=new Set();
+function resetGraphAnim(){ seenNodes.clear(); seenEdges.clear(); seenTags.clear(); }
+function drawGraph(){
+  const svg=document.getElementById('graph');
+  const spX=95, spY=62, ox=50, oy=68, r=16;
+  const lanes=Object.values(state.lane).length||1;
+  const w=Math.max(600, ox*2+state.xCounter*spX), h=oy*2+lanes*spY+20;
+  svg.setAttribute('width',w); svg.setAttribute('height',h);
+  if(!state.initialized || !state.commits.length){
+    svg.innerHTML=`<text x="20" y="30" font-size="12" fill="var(--muted)">${state.initialized?'No commits yet — make one to see it appear here.':'Run git init to begin.'}</text>`;
+    return;
+  }
+  state.commits.forEach(c=>{ c._cx=ox+c.x*spX; c._cy=oy+c.lane*spY; });
+  let defs=`<defs>
+    <radialGradient id="gradC" cx="35%" cy="30%" r="75%"><stop offset="0%" style="stop-color:#8FA0F5"/><stop offset="100%" style="stop-color:var(--commitc)"/></radialGradient>
+    <radialGradient id="gradH" cx="35%" cy="30%" r="75%"><stop offset="0%" style="stop-color:#6FA1FF"/><stop offset="100%" style="stop-color:var(--accent)"/></radialGradient>
+    <radialGradient id="gradM" cx="35%" cy="30%" r="75%"><stop offset="0%" style="stop-color:#C0AEFF"/><stop offset="100%" style="stop-color:var(--merge)"/></radialGradient>
+    <filter id="softSh" x="-60%" y="-60%" width="220%" height="220%"><feDropShadow dx="0" dy="2" stdDeviation="2.2" flood-color="#1b2740" flood-opacity="0.28"/></filter>
+  </defs>`;
+  let edges=[], nodes=[], tags=[];
+  state.commits.forEach(c=>{
+    c.parents.forEach(pid=>{
+      const p=state.commits.find(x=>x.id===pid); if(!p) return;
+      const key=pid+'>'+c.id, isNew=!seenEdges.has(key); seenEdges.add(key);
+      const d=p.lane===c.lane ? `M${p._cx},${p._cy} L${c._cx},${c._cy}` : `M${p._cx},${p._cy} C ${p._cx+40},${p._cy} ${c._cx-40},${c._cy} ${c._cx},${c._cy}`;
+      edges.push(`<path d="${d}" fill="none" stroke="var(--border)" stroke-width="2.5" class="${isNew?'edge-new':''}"/>`);
+    });
+  });
+  const headId=state.branches[state.head.branch];
+  state.commits.forEach(c=>{
+    const isHead=c.id===headId, isMerge=c.parents.length>1;
+    const isNew=!seenNodes.has(c.id); seenNodes.add(c.id);
+    const grad=isMerge?'url(#gradM)':(isHead?'url(#gradH)':'url(#gradC)');
+    if(isHead) nodes.push(`<circle cx="${c._cx}" cy="${c._cy}" r="${r+6}" fill="none" stroke="var(--accent)" stroke-width="2" opacity=".55" class="head-ring"/>`);
+    nodes.push(`<g class="${isNew?'node-new':''}">
+      <circle cx="${c._cx}" cy="${c._cy}" r="${r}" fill="${grad}" stroke="#FFFFFF" stroke-width="2" filter="url(#softSh)"/>
+      ${isMerge?`<circle cx="${c._cx}" cy="${c._cy}" r="${r-6}" fill="none" stroke="#FFFFFF" stroke-width="1.6" opacity=".8"/>`:''}
+    </g>`);
+    nodes.push(`<text x="${c._cx}" y="${c._cy+r+16}" font-size="10.5" text-anchor="middle" fill="var(--muted)">${c.id.slice(0,7)}</text>`);
+  });
+  Object.entries(state.branches).forEach(([name,cid])=>{
+    const c=state.commits.find(x=>x.id===cid); if(!c) return;
+    const isHead=name===state.head.branch, tagY=c._cy-(r+6)-16, tw=name.length*7.5+18;
+    const key='tagcreate:'+name, isNew=!seenTags.has(key); seenTags.add(key);
+    tags.push(`<g class="${isNew?'tag-new':''}">
+      <rect x="${c._cx-tw/2}" y="${tagY-14}" width="${tw}" height="20" rx="6" fill="${isHead?'var(--accent)':'var(--panel2)'}" stroke="${isHead?'var(--accent)':'var(--border)'}" filter="url(#softSh)"/>
+      <text x="${c._cx}" y="${tagY}" font-size="11" text-anchor="middle" fill="${isHead?'#FFFFFF':'var(--text)'}">${isHead?'HEAD → ':''}${name}</text>
+    </g>`);
+  });
+  svg.innerHTML = defs+edges.join('')+nodes.join('')+tags.join('');
+}
+
+// ---- challenges ----
+const CHALLENGES={
+  easy:[
+    {id:'e1',title:'Initialize a repository',hint:'git init',check:s=>s.initialized},
+    {id:'e2',title:'Check the status of your files',hint:'git status',check:s=>s.ranStatus},
+    {id:'e3',title:'Edit a file (click it in Working Directory)',hint:'click app.js',check:s=>s.everModified},
+    {id:'e4',title:'Stage app.js',hint:'git add app.js',check:s=>s.files['app.js']&&s.files['app.js'].status==='staged'},
+    {id:'e5',title:'Undo a change with restore',hint:'edit a file → git restore app.js',check:s=>s.everRestored},
+    {id:'e6',title:'Make your first commit',hint:'git commit -m "message"',check:s=>s.commits.length>=1},
+    {id:'e7',title:"Create a branch called 'feature'",hint:'git branch feature',check:s=>!!s.branches['feature']},
+    {id:'e8',title:'List all your branches',hint:'git branch',check:s=>s.ranBranchList},
+  ],
+  medium:[
+    {id:'m1',title:'Switch to the feature branch',hint:'git switch feature',check:s=>s.head.branch==='feature'},
+    {id:'m2',title:'Commit a change on feature',hint:'edit a file → git add → git commit',check:s=>s.commitLog.some(c=>c.branch==='feature')},
+    {id:'m3',title:'Compare a changed file to its last commit',hint:'edit a file → git diff',check:s=>s.ranDiffWithChanges},
+    {id:'m4',title:'View the branch graph',hint:'git log --graph',check:s=>s.ranLogGraph},
+    {id:'m5',title:'Diverge main and feature',hint:'switch to main, then commit again',check:s=>{const a=s.branches.main,b=s.branches.feature; return a&&b&&a!==b&&!isAncestor(a,b)&&!isAncestor(b,a);}},
+    {id:'m6',title:'Merge feature into main',hint:'git switch main → git merge feature',check:s=>s.mergeLog.some(m=>m.from==='feature')},
+    {id:'m7',title:'Get a fast-forward merge (no merge commit)',hint:'merge a branch before main has moved on',check:s=>s.mergeLog.some(m=>m.type==='ff')},
+  ],
+  hard:[
+    {id:'h1',title:"Branch 'hotfix' from main and commit on it",hint:'git branch hotfix → git switch hotfix → commit',check:s=>!!s.branches.hotfix && s.commitLog.some(c=>c.branch==='hotfix')},
+    {id:'h2',title:'Merge hotfix into main too',hint:'git switch main → git merge hotfix',check:s=>s.mergeLog.some(m=>m.from==='hotfix')},
+    {id:'h3',title:'Try deleting an unmerged branch and read the warning',hint:'git branch -d hotfix (before merging it)',check:s=>s.blockedDelete},
+    {id:'h4',title:'Delete feature now that it is merged',hint:'git branch -d feature',check:s=>!s.branches['feature'] && s.mergeLog.some(m=>m.from==='feature')},
+    {id:'h5',title:'Get two real merge commits on the graph',hint:'make sure main moves forward between each branch and its merge',check:s=>s.mergeLog.filter(m=>m.type==='merge').length>=2},
+    {id:'h6',title:'Have three branches pointing at three different commits',hint:'give main, feature and hotfix each their own unmerged commit',check:s=>{const ids=Object.values(s.branches); return ids.length>=3 && new Set(ids).size>=3;}},
+    {id:'h7',title:'Leave one branch deliberately unmerged',hint:'create a branch, commit on it, and never merge it into main',check:s=>Object.entries(s.branches).some(([n,id])=>n!=='main'&&!isAncestor(id,s.branches.main))},
+  ]
+};
+function evaluateChallenges(){
+  Object.values(CHALLENGES).flat().forEach(c=>{
+    if(!flags[c.id] && c.check(state)){ flags[c.id]=true; toast('✓ '+c.title); }
+  });
+  renderChallenges();
+}
+function renderChallenges(){
+  const list=CHALLENGES[level];
+  const done=list.filter(c=>flags[c.id]).length;
+  document.getElementById('chalTitle').textContent=`${level[0].toUpperCase()+level.slice(1)} · ${done}/${list.length} complete`;
+  document.getElementById('chalList').innerHTML=list.map(c=>`
+    <div class="chal ${flags[c.id]?'done':''}">
+      <div class="tick">${flags[c.id]?'✓':''}</div>
+      <div><div class="title">${c.title}</div><div class="hint">${c.hint}</div></div>
+    </div>`).join('');
+}
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+
+function startReplay(){
+  if(isReplaying) return;
+  if(!history.length){ toast('Run some commands first — then you can replay them.'); return; }
+  isReplaying=true; resetGraphAnim();
+  document.getElementById('termIn').disabled=true;
+  document.getElementById('replayBtn').classList.add('hidden');
+  document.getElementById('stopBtn').classList.remove('hidden');
+  flags={}; // let achievements re-pop as you watch, purely visual — nothing is lost
+  state=freshState();
+  out('— Replaying from the start —','note');
+  renderAll(); renderChallenges();
+  let i=0; const total=history.length;
+  function step(){
+    if(!isReplaying) return;
+    if(i>=total){ finishReplay(); return; }
+    document.getElementById('replayStatus').textContent=`Step ${i+1}/${total}`;
+    run(history[i],true);
+    i++;
+    replayTimer=setTimeout(step,850);
+  }
+  step();
+}
+function finishReplay(){
+  isReplaying=false; clearTimeout(replayTimer);
+  document.getElementById('termIn').disabled=false;
+  document.getElementById('replayBtn').classList.remove('hidden');
+  document.getElementById('stopBtn').classList.add('hidden');
+  document.getElementById('replayStatus').textContent='';
+  out('— Replay finished. Press Replay any time to watch it again. —','note');
+}
+function stopReplay(){ finishReplay(); }
+
+// ---- wiring ----
+document.getElementById('termForm').addEventListener('submit',e=>{
+  e.preventDefault(); const inp=document.getElementById('termIn');
+  if(inp.value.trim()){ run(inp.value); inp.value=''; }
+});
+document.querySelectorAll('.lvl').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.lvl').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+  level=b.dataset.level; renderChallenges();
+}));
+document.getElementById('refBtn').onclick=()=>document.getElementById('refPanel').classList.remove('hidden');
+document.getElementById('refClose').onclick=()=>document.getElementById('refPanel').classList.add('hidden');
+document.getElementById('replayBtn').onclick=startReplay;
+document.getElementById('stopBtn').onclick=stopReplay;
+
+out('Welcome! This is a sandbox with three pretend files: index.html, app.js, style.css. Type git commands below — try <b>git init</b> to start.','ok');
+renderAll(); renderChallenges();
+</script>
+</body>
+</html>
